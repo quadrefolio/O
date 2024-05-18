@@ -1,6 +1,14 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+
+
+
+
+MEMORY_SIZE = 61;
+Memory memoryArray[MEMORY_SIZE];
 
 
 typedef struct 
@@ -9,6 +17,8 @@ typedef struct
     int max;
     
 }MemoryBoundaries;
+
+
 typedef struct 
 {
     int Pid;
@@ -19,19 +29,36 @@ typedef struct
 }PCB;
 
 
+typedef struct 
+{
+    char name [32];
+    char data [64];
+}Memory;
+
+
+void initializeMemoryArray() {
+
+    for (int i = 0; i < MEMORY_SIZE; i++) {
+        strcpy(memoryArray[i].name, " ");
+        strcpy(memoryArray[i].data, " ");
+    }
+}
+
+
+
 
 
 
 void translate(){
     
+    
 }
 
 
 
+
 int main(){
-    PCB b ;
-    b.Memoryboundaries.max=10;
-    char hi [32]="hello";
-    printf("hi %d",b.Memoryboundaries.max);
+    initializeMemoryArray();
+    
     return 0;
 }
