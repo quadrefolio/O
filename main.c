@@ -31,6 +31,7 @@ int arrival_1;
 int arrival_2;
 int arrival_3;
 int clock;
+int inst =1;
 Memory *memoryArray;
 PCB programs[NUM_INST];
 
@@ -72,6 +73,10 @@ void addProcess(int processID, int arrivalTime, const char *filename) {
         return;
     }
 
+    if (inst == 1){
+        newProcess.Memoryboundaries.min = 0;
+    }    
+
     snprintf(memoryArray[memIndex].name, 64 , "Process ID");
     snprintf(memoryArray[memIndex].data, 64, "%d", processID);
 
@@ -88,27 +93,28 @@ void addProcess(int processID, int arrivalTime, const char *filename) {
     memIndex++;
 
     snprintf(memoryArray[memIndex].name, 64 , "Boundaries");
-    snprintf(memoryArray[memIndex].data, 64, "%d", newProcess.Memoryboundaries.min);
-
+    snprintf(memoryArray[memIndex].data, 64, "%d %d", newProcess.Memoryboundaries.min, newProcess.Memoryboundaries.max);
+    int boundariesMax= memIndex;
     memIndex++;
 
 
     char line[64];
-
-    //Number of instructions in the program
-    int lineCount = 4;
+    int processSize = 7;
 
     while (fgets(line, sizeof(line), file)) {
-        snprintf(memoryArray[lineCount].name, 64 , "Instruction");
-        snprintf(memoryArray[lineCount].data, 64, line);
-        lineCount++;
+        snprintf(memoryArray[processSize].name, 64 , "Instruction");
+        snprintf(memoryArray[processSize].data, 64, line);
+        processSize++;
     }
-
+    newProcess.Memoryboundaries.max = processSize;
+    snprintf(memoryArray[boundariesMax].name, 64 , "Boundaries");
+    snprintf(memoryArray[boundariesMax].data, 64, "%d %d", newProcess.Memoryboundaries.min, newProcess.Memoryboundaries.max);
+    newProcess.Memoryboundaries.max = processSize;
     memIndex = newProcess.Memoryboundaries.max + 1;
     programs[processID] = newProcess;
 
     printMemoryArray();
-
+    inst++;
     fclose(file);
 
 }
