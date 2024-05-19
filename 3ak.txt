@@ -1,0 +1,197 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+#define MAX_PROCESSES 3
+#define MAX_INSTRUCTIONS 100
+#define MAX_LINE_LENGTH 100
+#define MEMORY_SIZE 60
+
+typedef struct {
+    int processID;
+    int arrivalTime;
+    int burstTime;
+    int remainingTime;
+    char state[10];
+    int programCounter;
+    int memoryLowerBound;
+    int memoryUpperBound;
+    char instructions[MAX_INSTRUCTIONS][MAX_LINE_LENGTH];
+    int instructionCount;
+} PCB;
+
+PCB processes[MAX_PROCESSES];
+int currentTime = 0;
+int quantumTime;
+
+void addProcess(int processID, int arrivalTime, const char *filename) {
+    PCB newProcess;
+    newProcess.processID = processID;
+    newProcess.arrivalTime = arrivalTime;
+    newProcess.programCounter = 0;
+    newProcess.remainingTime = 0;
+    strcpy(newProcess.state, "Ready");
+
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening file");
+        return;
+    }
+
+    newProcess.instructionCount = 0;
+    while (fgets(newProcess.instructions[newProcess.instructionCount], MAX_LINE_LENGTH, file)) {
+        newProcess.instructions[newProcess.instructionCount][strcspn(newProcess.instructions[newProcess.instructionCount], "\n")] = 0;
+        newProcess.instructionCount++;
+        newProcess.remainingTime++; // Increment burst time for each instruction
+    }
+
+    fclose(file);
+    processes[processID] = newProcess;
+}
+
+void readPrograms() {
+    printf("Enter the quantum time: ");
+    scanf("%d", &quantumTime);
+
+    int arrivalTimes[MAX_PROCESSES];
+    char filenames[MAX_PROCESSES][50];
+
+    for (int i = 0; i < MAX_PROCESSES; i++) {
+        printf("Enter arrival time and filename for process %d: ", i);
+        scanf("%d %s", &arrivalTimes[i], filenames[i]);
+        addProcess(i, arrivalTimes[i], filenames[i]);
+    }
+}
+
+typedef struct {
+    int locked;
+    int blockingQueue[MAX_PROCESSES];
+    int queueCount;
+} Mutex;
+
+Mutex userInputMutex = {0, {0}, 0};
+Mutex userOutputMutex = {0, {0}, 0};
+Mutex fileMutex = {0, {0}, 0};
+
+void semWait(Mutex *mutex, int processID) {
+    if (mutex->locked) {
+        strcpy(processes[processID].state, "Blocked");
+        mutex->blockingQueue[mutex->queueCount++] = processID;
+    } else {
+        mutex->locked = 1;
+    }
+}
+
+void semSignal(Mutex *mutex) {
+    if (mutex->queueCount > 0) {
+        int processID = mutex->blockingQueue[0];
+        for (int i = 1; i < mutex->queueCount; i++) {
+            mutex->blockingQueue[i - 1] = mutex->blockingQueue[i];
+        }
+        mutex->queueCount--;
+        strcpy(processes[processID].state, "Ready");
+    } else {
+        mutex->locked = 0;
+    }
+}
+
+void executeInstruction(PCB *process) {
+    char *instruction = process->instructions[process->programCounter];
+    if (strncmp(instruction, "semWait", 7) == 0) {
+        char resource[20];
+        sscanf(instruction, "semWait %s", resource);
+        if (strcmp(resource, "userInput") == 0) {
+            semWait(&userInputMutex, process->processID);
+        } else if (strcmp(resource, "userOutput") == 0) {
+            semWait(&userOutputMutex, process->processID);
+        } else if (strcmp(resource, "file") == 0) {
+            semWait(&fileMutex, process->processID);
+        }
+    } else if (strncmp(instruction, "assign", 6) == 0) {
+        // Handle assign operation
+    } else if (strncmp(instruction, "semSignal", 9) == 0) {
+        char resource[20];
+        sscanf(instruction, "semSignal %s", resource);
+        if (strcmp(resource, "userInput") == 0) {
+            semSignal(&userInputMutex);
+        } else if (strcmp(resource, "userOutput") == 0) {
+            semSignal(&userOutputMutex);
+        } else if (strcmp(resource, "file") == 0) {
+            semSignal(&fileMutex);
+        }
+    } else if (strncmp(instruction, "printFromTo", 11) == 0) {
+        int start, end;
+        sscanf(instruction, "printFromTo %d %d", &start, &end);
+        for (int i = start; i <= end; i++) {
+            printf("%d\n", i);
+        }
+    } else if (strncmp(instruction, "writeFile", 9) == 0) {
+        char filename[50], data[50];
+        sscanf(instruction, "writeFile %s %s", filename, data);
+        FILE *file = fopen(filename, "w");
+        if (file) {
+            fprintf(file, "%s", data);
+            fclose(file);
+        }
+    } else if (strncmp(instruction, "readFile", 8) == 0) {
+        char filename[50];
+        sscanf(instruction, "readFile %s", filename);
+        FILE *file = fopen(filename, "r");
+        if (file) {
+            char ch;
+            while ((ch = fgetc(file)) != EOF) {
+                putchar(ch);
+            }
+            fclose(file);
+        }
+    } else if (strncmp(instruction, "print", 5) == 0) {
+        char var[20];
+        sscanf(instruction, "print %s", var);
+        printf("%s\n", var);
+    }
+}
+
+void roundRobin() {
+    int completed = 0;
+    while (completed < MAX_PROCESSES) {
+        for (int i = 0; i < MAX_PROCESSES; i++) {
+            if (processes[i].arrivalTime <= currentTime && strcmp(processes[i].state, "Ready") == 0) {
+                printf("Time %d: Process %d is running\n", currentTime, processes[i].processID);
+                strcpy(processes[i].state, "Running");
+
+                for (int qt = 0; qt < quantumTime && processes[i].remainingTime > 0; qt++) {
+                    executeInstruction(&processes[i]);
+                    processes[i].programCounter++;
+                    processes[i].remainingTime--;
+                    currentTime++;
+
+                    // Check for new arrivals and handle blocked processes
+                    for (int j = 0; j < MAX_PROCESSES; j++) {
+                        if (processes[j].arrivalTime == currentTime && strcmp(processes[j].state, "Ready") == 0) {
+                            printf("Time %d: Process %d arrived and added to ready queue\n", currentTime, j);
+                        }
+                        if (strcmp(processes[j].state, "Blocked") == 0 && !userInputMutex.locked) {
+                            strcpy(processes[j].state, "Ready");
+                            printf("Time %d: Process %d moved from blocked to ready\n", currentTime, j);
+                        }
+                    }
+                }
+
+                if (processes[i].remainingTime > 0) {
+                    strcpy(processes[i].state, "Ready");
+                } else {
+                    strcpy(processes[i].state, "Finished");
+                    completed++;
+                }
+                printf("Time %d: Process %d is ready\n", currentTime, processes[i].processID);
+            }
+        }
+    }
+}
+
+int main() {
+    readPrograms();
+    roundRobin();
+    return 0;
+}
