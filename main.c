@@ -5,12 +5,15 @@
 #define MEMORY_SIZE 61
 #define NUM_INST 3
 
+
+//To define the boundaries of a process
 typedef struct 
 {
     int min;
     int max;
 } MemoryBoundaries;
 
+//To define the Process Control Block (and thus, PCB)
 typedef struct 
 {
     int pID;
@@ -19,13 +22,14 @@ typedef struct
     MemoryBoundaries Memoryboundaries;
 } PCB;
 
+//Memory structure to store the data of the process
 typedef struct 
 {
     char name [32];
     char data [64];
 } Memory;
 
-
+//Global variables
 int quanta;
 int arrival_1;
 int arrival_2;
@@ -76,6 +80,9 @@ void addProcess(int processID, int arrivalTime, const char *filename) {
     if (inst == 1){
         newProcess.Memoryboundaries.min = 0;
     }    
+    else {
+        newProcess.Memoryboundaries.min = programs[processID-1].Memoryboundaries.max + 1;
+    }
 
     snprintf(memoryArray[memIndex].name, 64 , "Process ID");
     snprintf(memoryArray[memIndex].data, 64, "%d", processID);
@@ -89,6 +96,7 @@ void addProcess(int processID, int arrivalTime, const char *filename) {
 
     snprintf(memoryArray[memIndex].name, 64 , "PC");
     snprintf(memoryArray[memIndex].data, 64, "%d", newProcess.PC);
+    int PCindex = memIndex;
 
     memIndex++;
 
@@ -96,24 +104,35 @@ void addProcess(int processID, int arrivalTime, const char *filename) {
     snprintf(memoryArray[memIndex].data, 64, "%d %d", newProcess.Memoryboundaries.min, newProcess.Memoryboundaries.max);
     int boundariesMax= memIndex;
     memIndex++;
+    memIndex++;
+    memIndex++;
+    memIndex++;
+
+    int PC = memIndex;
+    newProcess.PC = PC;
 
 
     char line[64];
-    int processSize = 7;
 
     while (fgets(line, sizeof(line), file)) {
-        snprintf(memoryArray[processSize].name, 64 , "Instruction");
-        snprintf(memoryArray[processSize].data, 64, line);
-        processSize++;
+        snprintf(memoryArray[memIndex].name, 64 , "Instruction");
+        snprintf(memoryArray[memIndex].data, 64, line);
+        memIndex++;
     }
-    newProcess.Memoryboundaries.max = processSize;
+
+    newProcess.Memoryboundaries.max = memIndex-1;
     snprintf(memoryArray[boundariesMax].name, 64 , "Boundaries");
     snprintf(memoryArray[boundariesMax].data, 64, "%d %d", newProcess.Memoryboundaries.min, newProcess.Memoryboundaries.max);
-    newProcess.Memoryboundaries.max = processSize;
+    snprintf(memoryArray[PCindex].name, 64 , "PC");
+    snprintf(memoryArray[PCindex].data, 64, "%d", PC);
     memIndex = newProcess.Memoryboundaries.max + 1;
     programs[processID] = newProcess;
 
-    printMemoryArray();
+    printf("\n");
+    int min, max;
+    sscanf(memoryArray[boundariesMax].data, "%d %d", &min, &max);
+    printf("Min: %d\n", min);
+    printf("Max: %d\n", max);
     inst++;
     fclose(file);
 
@@ -122,5 +141,8 @@ void addProcess(int processID, int arrivalTime, const char *filename) {
 int main(){
     initializeMemoryArray();
     addProcess(1, 0,"Program_1.txt");
+    addProcess(2, 0,"Program_2.txt");
+    addProcess(3, 0,"Program_3.txt");
+    printMemoryArray();
     return 0;
 }
