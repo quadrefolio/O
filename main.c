@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #define MEMORY_SIZE 61
 #define NUM_INST 3
-
 
 struct Node {
     int data;
@@ -21,9 +21,9 @@ struct Node* newNode(int data) {
 
 // Queue structure
 struct Queue {
-    struct Node *front, *rear;
+    struct Node* front;
+    struct Node* rear;
 };
-
 // Function to create a new empty queue
 struct Queue* createQueue() {
     struct Queue* queue = (struct Queue*)malloc(sizeof(struct Queue));
@@ -31,15 +31,26 @@ struct Queue* createQueue() {
     return queue;
 }
 
+
+
+struct Queue* Blocked;
+struct Queue* Ready;
+// Mutex implementation
+struct mutex {
+    enum {zero,one} value;
+    struct Queue* queue ;
+    int ownerID;
+};
+
+
+
 // Function to add an element to the queue
 void enqueue(struct Queue* queue, int data) {
     struct Node* node = newNode(data);
-    // If the queue is empty, new node becomes both front and rear
     if (queue->rear == NULL) {
         queue->front = queue->rear = node;
         return;
     }
-    // Add the new node at the end of the queue and update rear
     queue->rear->next = node;
     queue->rear = node;
 }
@@ -72,6 +83,56 @@ void printQueue(struct Queue* queue) {
     }
     printf("NULL\n");
 }
+
+
+struct mutex file;
+struct mutex input;
+struct mutex output;
+
+
+void mutexinit(struct mutex m){
+    m.value=one;
+    m.queue=createQueue();
+    m.ownerID=0;
+}
+
+
+void semWaitB(struct mutex m,int processid) {
+if (m.value == one) {
+m.ownerID = processid;//need to pass the proceess id
+m.value = zero;
+printf("entered the semwait");
+} else {
+enqueue(m.queue,processid);
+enqueue(Blocked,processid);//putting the id of the process in the general blocked queue +need to change the state to blocked instead of ready 
+
+}
+}
+bool isQueueEmpty( struct Queue* q) {
+    if(q->front == NULL){
+        return true;
+    }
+    return false;
+}
+void semSignalB(struct mutex m, int processid)  {
+if(m.ownerID == processid){
+    if(isQueueEmpty(m.queue)){
+        m.value = one;
+}
+else {// to be checked 
+   int deq= dequeue(m.queue);
+   enqueue(Ready,deq);
+   m.ownerID=deq;
+/* remove a process P from m.queue and place it on ready list*/
+/* update ownerID to be equal to Process P’s ID */
+}
+}
+}
+
+
+
+
+
 
 
 //To define the boundaries of a process
@@ -119,8 +180,8 @@ void initializeMemoryArray() {
     
     // Initialize the structs in the array
     for (int i = 0; i < MEMORY_SIZE; i++) {
-        snprintf(memoryArray[i].name, 64 , "");
-        snprintf(memoryArray[i].data, 64, "");
+        snprintf(memoryArray[i].name, 64 ,"");
+        snprintf(memoryArray[i].data, 64,"");
     }
 
 }
@@ -381,18 +442,40 @@ void executeInstruction(int processID) {
 
 
 int main(){
-    initializeMemoryArray();
-    addProcess(1, 0,"Program_1.txt");
-    addProcess(2, 0,"Program_2.txt");
-    addProcess(3, 0,"Program_3.txt");
+
+    Blocked=createQueue();
+    Ready=createQueue();
+    mutexinit(file);
+    mutexinit(input);
+    mutexinit(output);
+    semWaitB(file,1);
+    semWaitB(file,2);
+
+
+
+
+
+    printQueue(Blocked);
+    printQueue(Ready);
+// struct Queue *q=createQueue();
+// enqueue(q,2);
+// enqueue(q,3);
+// enqueue(q,4);
+// int val =dequeue(q);
+// printf("%d",val);
+    // initializeMemoryArray();
+    // addProcess(1, 0,"Program_1.txt");
+    // addProcess(2, 0,"Program_2.txt");
+    // addProcess(3, 0,"Program_3.txt");
  
-    executeInstruction(1);
-    executeInstruction(1);
-    executeInstruction(1);
-    executeInstruction(1);
-    executeInstruction(1);
-    executeInstruction(1);
+    // executeInstruction(1);
+    // executeInstruction(1);
+    // executeInstruction(1);
+    // executeInstruction(1);
+    // executeInstruction(1);
+    // executeInstruction(1);
     
-    printMemoryArray();
+    // printMemoryArray();
+     
     return 0;
 }
