@@ -443,13 +443,13 @@ void executeInstruction(int processID) {
 
 int main(){
 
-    Blocked=createQueue();
-    Ready=createQueue();
-    mutexinit(file);
-    mutexinit(input);
-    mutexinit(output);
-    semWaitB(file,1);
-    semWaitB(file,2);
+    // Blocked=createQueue();
+    // Ready=createQueue();
+    // mutexinit(file);
+    // mutexinit(input);
+    // mutexinit(output);
+    // semWaitB(file,1);
+    // semWaitB(file,2);
 
 
 
@@ -457,26 +457,26 @@ int main(){
 
     printQueue(Blocked);
     printQueue(Ready);
-// struct Queue *q=createQueue();
-// enqueue(q,2);
-// enqueue(q,3);
-// enqueue(q,4);
-// int val =dequeue(q);
-// printf("%d",val);
-    // initializeMemoryArray();
-    // addProcess(1, 0,"Program_1.txt");
-    // addProcess(2, 0,"Program_2.txt");
-    // addProcess(3, 0,"Program_3.txt");
+struct Queue *q=createQueue();
+enqueue(q,2);
+enqueue(q,3);
+enqueue(q,4);
+int val =dequeue(q);
+printf("%d",val);
+    initializeMemoryArray();
+    addProcess(1, 0,"Program_1.txt");
+    addProcess(2, 0,"Program_2.txt");
+    addProcess(3, 0,"Program_3.txt");
  
-    // executeInstruction(1);
-    // executeInstruction(1);
-    ////////
-    // executeInstruction(1);
-    // executeInstruction(1);
-    // executeInstruction(1);
-    // executeInstruction(1);
+    executeInstruction(1);
+    executeInstruction(1);
+    //////
+    executeInstruction(1);
+    executeInstruction(1);
+    executeInstruction(1);
+    executeInstruction(1);
     
-    // printMemoryArray();
+    printMemoryArray();
      
     return 0;
 }
