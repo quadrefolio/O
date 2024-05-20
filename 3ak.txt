@@ -8,6 +8,9 @@
 #define MAX_LINE_LENGTH 100
 #define MEMORY_SIZE 60
 
+
+
+
 typedef struct {
     int processID;
     int arrivalTime;

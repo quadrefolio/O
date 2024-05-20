@@ -1,5 +1,5 @@
 semWait userInput
-assign a input
+assign a seif
 assign b input
 semSignal userInput
 semWait file
