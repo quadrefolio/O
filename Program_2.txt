@@ -1,6 +1,7 @@
 semWait userInput
-assign a seif
+assign a input
 assign b input
+writeFile a b
 semSignal userInput
 semWait file
 writeFile a b
