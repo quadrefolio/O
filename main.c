@@ -134,6 +134,28 @@ void printMemoryArray() {
     }
 }
 
+char* readFile(const char* filename) {
+    // sprintf(filename, "%s.txt", filename);
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("Cannot open file %s\n", filename);
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    char* content = malloc(length + 1);
+    if (content) {
+        fread(content, 1, length, file);
+        content[length] = '\0';
+    }
+
+    fclose(file);
+    return content;
+}
+
 void addProcess(int processID, int arrivalTime, const char *filename) {
     PCB newProcess;
     newProcess.pID = processID;
@@ -209,7 +231,11 @@ void addProcess(int processID, int arrivalTime, const char *filename) {
 
 void executeInstruction(int processID) {
     PCB *process = &programs[processID];
-    int PC = process->PC +1;
+
+    //This was the value of PC before i edited it, it wasn't executing the first instruction of the program
+    // int PC = process->PC + 1;
+
+    int PC = process->PC;
 
     if (PC < process->Memoryboundaries.min || PC > process->Memoryboundaries.max) {
         printf("Error: Program Counter out of bounds.\n");
@@ -232,18 +258,49 @@ void executeInstruction(int processID) {
                 break;
             }
         }
-    } 
+    }
+
     else if (strcmp(command, "assign") == 0) {
         char var[32], value[32];
         sscanf(instruction, "assign %s %s", var, value);
+        if(strcmp(value, "input") == 0){
+            printf("Enter value for %s: ", var);
+            scanf("%s", value);
+        }
+        else if(strncmp(value, "readFile", 8) == 0){
+            char filename[32];
+            sscanf(instruction, "assign %s %s %s", var, value, filename);
+
+            for(int i = process->Memoryboundaries.min; i <= process->Memoryboundaries.max; i++){
+                if(strcmp(memoryArray[i].name, filename) == 0){
+                    strcpy(filename, memoryArray[i].data);
+                    break;
+                }
+            }
+            char* fileContent = readFile(filename);
+            if(fileContent == NULL){
+                perror("No file content");
+                return;
+            }
+            strcpy(value, fileContent);
+            free(fileContent);
+        }
         strcpy(memoryArray[programs[processID].var].name, var);
         strcpy(memoryArray[programs[processID].var].data, value);
         process->var++;
-        
-    } 
+    }
+
     else if (strcmp(command, "writeFile") == 0) {
         char filename[32], data[64];
         sscanf(instruction, "writeFile %s %s", filename, data);
+        for(int i = process->Memoryboundaries.min; i <= process->Memoryboundaries.max; i++){
+            if(strcmp(filename, memoryArray[i].name) == 0){
+                strcpy(filename, memoryArray[i].data);
+            }
+            else if(strcmp(data, memoryArray[i].name) == 0){
+                strcpy(data, memoryArray[i].data);
+            }
+        }
         FILE *file = fopen(filename, "w");
         if (file) {
             fprintf(file, "%s", data);
@@ -251,28 +308,50 @@ void executeInstruction(int processID) {
         } else {
             perror("Error opening file");
         }
-    } 
+    }
+
     else if (strcmp(command, "readFile") == 0) {
         char filename[32];
         sscanf(instruction, "readFile %s", filename);
+        for(int i = process->Memoryboundaries.min; i <= process->Memoryboundaries.max; i++){
+            if(strcmp(filename, memoryArray[i].name) == 0){
+                strcpy(filename, memoryArray[i].data);
+            }
+        }
         FILE *file = fopen(filename, "r");
         if (file) {
             char line[64];
             while (fgets(line, sizeof(line), file)) {
                 printf("%s", line);
             }
+            printf("\n");
             fclose(file);
         } else {
             perror("Error opening file");
         }
     } 
+
     else if (strcmp(command, "printFromTo") == 0) {
-        int x, y;
-        sscanf(instruction, "printFromTo %d %d", &x, &y);
-        for (int i = x; i <= y; i++) {
+        char x[32], y[32];
+        int value1, value2;
+        sscanf(instruction, "printFromTo %s %s", x, y);
+
+        for(int i = process->Memoryboundaries.min; i <= process->Memoryboundaries.max; i++){
+            if(strcmp(x, memoryArray[i].name) == 0){
+                value1 = atoi(memoryArray[i].data);
+                printf("Value1: %d\n", value1);
+            }
+            else if(strcmp(y, memoryArray[i].name) == 0){
+                value2 = atoi(memoryArray[i].data);
+                printf("Value2: %d\n", value2);
+            }
+        }
+
+        for (int i = value1; i <= value2; i++) {
             printf("%d\n", i);
         }
-    } 
+    }
+
     else if (strcmp(command, "semWait") == 0) {
         char resource[32];
         sscanf(instruction, "semWait %s", resource);
@@ -283,7 +362,8 @@ void executeInstruction(int processID) {
         } else if (strcmp(resource, "file") == 0) {
             printf("Waiting for file access...\n");
         }
-    } 
+    }
+
     else if (strcmp(command, "semSignal") == 0) {
         char resource[32];
         sscanf(instruction, "semSignal %s", resource);
@@ -295,7 +375,10 @@ void executeInstruction(int processID) {
             printf("Signaling file access...\n");
         }
     }
+    //Instead of incrementing the PC by 1 in the mmain(), I increment it in the executeInstruction() function
+    programs[processID].PC ++;
 }
+
 
 int main(){
     initializeMemoryArray();
@@ -303,11 +386,12 @@ int main(){
     addProcess(2, 0,"Program_2.txt");
     addProcess(3, 0,"Program_3.txt");
  
-    executeInstruction(2);
-    programs[2].PC ++;
-    executeInstruction(2);
-    programs[2].PC ++;
-    executeInstruction(2);
+    executeInstruction(1);
+    executeInstruction(1);
+    executeInstruction(1);
+    executeInstruction(1);
+    executeInstruction(1);
+    executeInstruction(1);
     
     printMemoryArray();
     return 0;
