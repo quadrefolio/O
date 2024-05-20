@@ -138,6 +138,7 @@ void addProcess(int processID, int arrivalTime, const char *filename) {
 
 }
 
+
 int main(){
     initializeMemoryArray();
     addProcess(1, 0,"Program_1.txt");
